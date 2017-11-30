@@ -7,7 +7,7 @@ import '../lib/parser.dart';
 main(List<String> args) async {
     final parser = new ArgParser()
         ..addOption('file', abbr: 'f', help: 'Path of the image file to parse.')
-        ..addFlag('optimize', abbr: 'o', help: 'Run the image optimizer.', defaultsTo: false);
+        ..addFlag('optimize', abbr: 'o', help: 'Run the image optimizer.', defaultsTo: false, negatable: false);
     ArgResults argResults = parser.parse(args);
     Function errorHandler = (e, stackTrace) {
         String message = e is Exception ? e.message : e.toString();
@@ -23,7 +23,7 @@ main(List<String> args) async {
             errorHandler(e, stackTrace);
         }
     }
-    else {
+    else if (argResults['file']) {
         String path = argResults['file'];
         if (path == null) {
             print('"file" option must be set: -f /path/to/image.jpg');
@@ -31,10 +31,14 @@ main(List<String> args) async {
         }
         try {
             ImageParser imageParser = new ImageParser();
-            print(imageParser.parseImage(argResults['file']));
+            print(imageParser.parseImage(path));
             exit(0);
         } catch (e, stackTrace) {
             errorHandler(e, stackTrace);
         }
+    }
+    else {
+        print(parser.usage);
+        exit(0);
     }
 }

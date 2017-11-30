@@ -25,9 +25,9 @@ Run `dart bin/server.dart`. By default, the HTTP server runs on `0.0.0.0:8080`. 
 
 Usage: `bin/cli.dart [arguments]`
 
-Available commands:
-* `optimize`   - Run the optimizer.
-* `file`       - Parse a single image file.
+Available options:
+* `-o, --optimize`   - Run the optimizer.
+* `-f, --file`       - Parse a single image file.
 
 ## Running tests
 
