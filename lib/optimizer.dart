@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:crypto/crypto.dart' as crypto show sha1;
+import 'package:crypto/crypto.dart' as crypto show md5;
 import 'package:path/path.dart';
 import 'package:sprintf/sprintf.dart';
 
@@ -57,7 +57,7 @@ class OptimizeRunner {
         _tesseractOptions = tesseractOptions;
         _compileCommands();
         for (FileSystemEntity image in images) {
-            if (!(image is File)) {
+            if (!(image is File) || basename(image.path) == 'processing.jpg') {
                 continue;
             }
             _runImage(image);
@@ -66,7 +66,17 @@ class OptimizeRunner {
     }
 
     void _runImage(FileSystemEntity image) {
-        String imagePath = image.absolute.path;
+        String imagePath = image.absolute.path,
+               imageName = basenameWithoutExtension(image.path);
+        List micr = imageName.split('-');
+        if (micr.length != 3) {
+            throw new Exception('Invalid image name.');
+        }
+        Map expected = {
+            'routing': micr[0],
+            'account': micr[1],
+            'check': micr[2]
+        };
         for (List commands in _commands) {
             String key = _uniqueKey(commands);
             if (!_imageCommands.containsKey(key)) {
@@ -79,7 +89,7 @@ class OptimizeRunner {
                 imageCommands.add(sprintf(commands[0], [imagePath]));
                 try {
                     Map result = _parseText(_run(imageCommands[0]));
-                    _scores[key] += _calcScore(result);
+                    _scores[key] += _calcScore(result, expected);
                     message += '...done';
                 } catch (e) {
                     message += '...error';
@@ -91,7 +101,7 @@ class OptimizeRunner {
                 try {
                     _run(imageCommands[0]);
                     Map result = _parseText(_run(imageCommands[1]));
-                    _scores[key] += _calcScore(result);
+                    _scores[key] += _calcScore(result, expected);
                     message += '...done';
                 } catch (e) {
                     message += '...error';
@@ -180,18 +190,15 @@ class OptimizeRunner {
         }
     }
 
-    int _calcScore(Map result) {
+    int _calcScore(Map result, Map expected) {
         int score = 0;
-        if (!result.containsKey('routing')) {
-            return score;
-        }
-        else {
+        if (result.containsKey('routing') && result['routing'] == expected['routing']) {
             score += 10;
         }
-        if (result.containsKey('account')) {
+        if (result.containsKey('account') && result['account'] == expected['account']) {
             score += 10;
         }
-        if (result.containsKey('check')) {
+        if (result.containsKey('check') && result['check'] == expected['check']) {
             score += 2;
         }
         return score;
@@ -241,9 +248,9 @@ class OptimizeRunner {
         [options]
     );
 
-    /// Generate a SHA1 hash identifying the commands
+    /// Generate an MD5 hash identifying the given list
     String _uniqueKey(List commands) {
-        return crypto.sha1.convert(UTF8.encode(commands.join('-'))).toString();
+        return crypto.md5.convert(UTF8.encode(commands.join('-'))).toString();
     }
 }
 
